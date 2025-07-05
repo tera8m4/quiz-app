@@ -11,12 +11,8 @@ pub struct App {
 }
 
 impl App {
-    pub fn new() -> App {
-        let quiz = Quiz::new().unwrap_or_else(|err| {
-            eprintln!("Warning: Could not load questions.json: {}", err);
-            eprintln!("Using default questions instead.");
-            Quiz::from_default()
-        });
+    pub async fn new() -> App {
+        let quiz = Quiz::from_database("sqlite:quiz.db", 1).await.unwrap();
 
         App {
             quiz,

@@ -1,6 +1,7 @@
 mod app;
 mod ui;
 mod quiz;
+mod database;
 
 use crossterm::{
     event::{DisableMouseCapture, EnableMouseCapture},
@@ -12,7 +13,8 @@ use std::{error::Error, io};
 
 use app::App;
 
-fn main() -> Result<(), Box<dyn Error>> {
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn Error>> {
     // Setup terminal
     enable_raw_mode()?;
     let mut stdout = io::stdout();
@@ -21,7 +23,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut terminal = Terminal::new(backend)?;
 
     // Create app and run it
-    let mut app = App::new();
+    let mut app = App::new().await;
     let res = app.run(&mut terminal);
 
     // Restore terminal

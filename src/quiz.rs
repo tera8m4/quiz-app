@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::fs;
+use crate::database::Database;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Question {
@@ -25,13 +25,9 @@ pub struct Quiz {
 }
 
 impl Quiz {
-    pub fn new() -> Result<Quiz, Box<dyn std::error::Error>> {
-        Quiz::from_file("questions.json")
-    }
-
-    pub fn from_file(file_path: &str) -> Result<Quiz, Box<dyn std::error::Error>> {
-        let json_content = fs::read_to_string(file_path)?;
-        let quiz_data: QuizData = serde_json::from_str(&json_content)?;
+    pub async fn from_database(database_url: &str, quiz_id: i64) -> Result<Quiz, Box<dyn std::error::Error>> {
+        let db = Database::new(database_url).await?;
+        let quiz_data = db.get_quiz_data(quiz_id).await?;
 
         let user_answers = vec![None; quiz_data.questions.len()];
 
@@ -43,56 +39,6 @@ impl Quiz {
             show_results: false,
             score: 0,
         })
-    }
-
-    pub fn from_default() -> Quiz {
-        let quiz_data = QuizData {
-            title: "Default Quiz".to_string(),
-            description: "Built-in questions".to_string(),
-            questions: vec![
-                Question {
-                    text: "What is the capital of France?".to_string(),
-                    answers: [
-                        "London".to_string(),
-                        "Berlin".to_string(),
-                        "Paris".to_string(),
-                        "Madrid".to_string(),
-                    ],
-                    correct: 2,
-                },
-                Question {
-                    text: "Which planet is known as the Red Planet?".to_string(),
-                    answers: [
-                        "Venus".to_string(),
-                        "Mars".to_string(),
-                        "Jupiter".to_string(),
-                        "Saturn".to_string(),
-                    ],
-                    correct: 1,
-                },
-                Question {
-                    text: "What is 2 + 2?".to_string(),
-                    answers: [
-                        "3".to_string(),
-                        "4".to_string(),
-                        "5".to_string(),
-                        "6".to_string(),
-                    ],
-                    correct: 1,
-                },
-            ],
-        };
-
-        let user_answers = vec![None; quiz_data.questions.len()];
-
-        Quiz {
-            quiz_data,
-            current_question: 0,
-            selected_answer: 0,
-            user_answers,
-            show_results: false,
-            score: 0,
-        }
     }
 
     pub fn next_question(&mut self) {
