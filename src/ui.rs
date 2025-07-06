@@ -64,7 +64,7 @@ fn draw_question_text(f: &mut Frame, quiz: &Quiz, area: ratatui::layout::Rect) {
     let current_q = quiz.get_current_question();
     let question_text = current_q.text.clone();
 
-    let block_title = format!("{}", quiz.quiz_data.title);
+    let block_title = format!("{} :: {}", quiz.quiz_data.title, quiz.get_srs_stage_name());
     let question = Paragraph::new(question_text)
         .style(Style::default().fg(Color::White))
         .alignment(Alignment::Left)

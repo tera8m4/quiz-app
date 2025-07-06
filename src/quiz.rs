@@ -116,12 +116,6 @@ impl Quiz {
         !self.quiz_data.questions.is_empty() && self.current_question < self.quiz_data.questions.len()
     }
 
-    pub async fn select_answer_async(&mut self) -> Result<(), Box<dyn std::error::Error>> {
-        self.user_answers[self.current_question] = Some(self.selected_answer);
-        self.submit_answer(self.selected_answer).await?;
-        Ok(())
-    }
-
     pub fn move_selection_up(&mut self) {
         if self.selected_answer > 0 {
             self.selected_answer -= 1;
@@ -151,14 +145,6 @@ impl Quiz {
                 }
             }
         }
-    }
-
-    pub fn restart(&mut self) {
-        self.current_question = 0;
-        self.selected_answer = 0;
-        self.user_answers = vec![None; self.quiz_data.questions.len()];
-        self.show_results = false;
-        self.score = 0;
     }
 
     pub async fn reload_srs_queue(&mut self) -> Result<(), Box<dyn std::error::Error>> {
@@ -257,16 +243,17 @@ impl Quiz {
         }
     }
 
-    pub fn get_srs_stage_name(&self) -> Option<String> {
+    pub fn get_srs_stage_name(&self) -> String {
         use crate::srs::SrsSystem;
         self.get_current_srs_item()
             .map(|item| SrsSystem::get_stage_name(item.srs_stage).to_string())
+            .unwrap_or("No stage".to_string())
     }
 
     pub fn get_srs_progress_info(&self) -> Option<String> {
         use crate::srs::SrsSystem;
         self.get_current_srs_item().map(|item| {
-            let stage_name = SrsSystem::get_stage_name(item.srs_stage);
+            let stage_name = self.get_srs_stage_name();
             let incorrect_count = item.incorrect_count;
             if incorrect_count > 0 {
                 format!("{} (Failed {} times)", stage_name, incorrect_count)

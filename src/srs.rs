@@ -61,7 +61,7 @@ impl SrsSystem {
 
         if stage == 9 {
             // For burned items, return a date far in the future
-            now + Duration::weeks(520)
+            now + Duration::weeks(32)
         } else {
             now + duration
         }
@@ -217,39 +217,6 @@ impl SrsSystem {
         }).collect();
 
         Ok(items)
-    }
-
-    pub async fn get_srs_stats(&self, user_id: i64) -> Result<SrsStats, sqlx::Error> {
-        let row = sqlx::query!(
-            "SELECT 
-                COUNT(*) as total_items,
-                SUM(CASE WHEN srs_stage = 1 THEN 1 ELSE 0 END) as apprentice_1,
-                SUM(CASE WHEN srs_stage = 2 THEN 1 ELSE 0 END) as apprentice_2,
-                SUM(CASE WHEN srs_stage = 3 THEN 1 ELSE 0 END) as apprentice_3,
-                SUM(CASE WHEN srs_stage = 4 THEN 1 ELSE 0 END) as apprentice_4,
-                SUM(CASE WHEN srs_stage = 5 THEN 1 ELSE 0 END) as guru_1,
-                SUM(CASE WHEN srs_stage = 6 THEN 1 ELSE 0 END) as guru_2,
-                SUM(CASE WHEN srs_stage = 7 THEN 1 ELSE 0 END) as master,
-                SUM(CASE WHEN srs_stage = 8 THEN 1 ELSE 0 END) as enlightened,
-                SUM(CASE WHEN srs_stage = 9 THEN 1 ELSE 0 END) as burned
-             FROM srs_items WHERE user_id = ?",
-            user_id
-        )
-        .fetch_one(&self.pool)
-        .await?;
-
-        Ok(SrsStats {
-            total_items: row.total_items as i64,
-            apprentice_1: row.apprentice_1.unwrap_or(0) as i64,
-            apprentice_2: row.apprentice_2.unwrap_or(0) as i64,
-            apprentice_3: row.apprentice_3.unwrap_or(0) as i64,
-            apprentice_4: row.apprentice_4.unwrap_or(0) as i64,
-            guru_1: row.guru_1.unwrap_or(0) as i64,
-            guru_2: row.guru_2.unwrap_or(0) as i64,
-            master: row.master.unwrap_or(0) as i64,
-            enlightened: row.enlightened.unwrap_or(0) as i64,
-            burned: row.burned.unwrap_or(0) as i64,
-        })
     }
 }
 
