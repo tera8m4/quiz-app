@@ -1,8 +1,10 @@
 use sqlx::{Row, SqlitePool, migrate::MigrateDatabase};
 use crate::quiz::{Question, QuizData};
+use crate::srs::SrsSystem;
 
 pub struct Database {
-    pool: SqlitePool,
+    pub pool: SqlitePool,
+    pub srs: SrsSystem,
 }
 
 impl Database {
@@ -16,7 +18,9 @@ impl Database {
         // Run migrations
         sqlx::migrate!("./migrations").run(&pool).await?;
         
-        Ok(Database { pool })
+        let srs = SrsSystem::new(pool.clone());
+        
+        Ok(Database { pool, srs })
     }
 
     pub async fn get_quiz_data(&self, quiz_id: i64) -> Result<QuizData, sqlx::Error> {
@@ -29,7 +33,7 @@ impl Database {
         let description: String = quiz_row.get("description");
 
         let question_rows = sqlx::query(
-            "SELECT text, answer_1, answer_2, answer_3, answer_4, correct_answer FROM questions WHERE quiz_id = ? ORDER BY id"
+            "SELECT id, text, answer_1, answer_2, answer_3, answer_4, correct_answer FROM questions WHERE quiz_id = ? ORDER BY id"
         )
         .bind(quiz_id)
         .fetch_all(&self.pool)
@@ -38,6 +42,7 @@ impl Database {
         let questions: Vec<Question> = question_rows
             .iter()
             .map(|row| {
+                let id: i64 = row.get("id");
                 let text: String = row.get("text");
                 let answer_1: String = row.get("answer_1");
                 let answer_2: String = row.get("answer_2");
@@ -46,6 +51,7 @@ impl Database {
                 let correct: i32 = row.get("correct_answer");
 
                 Question {
+                    id: Some(id),
                     text,
                     answers: [answer_1, answer_2, answer_3, answer_4],
                     correct: correct as usize,
@@ -70,7 +76,7 @@ impl Database {
         let quiz_id = result.last_insert_rowid();
 
         for question in &quiz_data.questions {
-            sqlx::query(
+            let result = sqlx::query(
                 "INSERT INTO questions (quiz_id, text, answer_1, answer_2, answer_3, answer_4, correct_answer) VALUES (?, ?, ?, ?, ?, ?, ?)"
             )
             .bind(quiz_id)
@@ -82,6 +88,10 @@ impl Database {
             .bind(question.correct as i32)
             .execute(&self.pool)
             .await?;
+            
+            // Initialize SRS item for this question
+            let question_id = result.last_insert_rowid();
+            self.srs.get_or_create_srs_item(question_id, 1).await?;
         }
 
         Ok(quiz_id)

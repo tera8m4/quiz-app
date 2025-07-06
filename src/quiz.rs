@@ -3,6 +3,7 @@ use crate::database::Database;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Question {
+    pub id: Option<i64>,
     pub text: String,
     pub answers: [String; 4],
     pub correct: usize,
@@ -22,6 +23,7 @@ pub struct Quiz {
     pub user_answers: Vec<Option<usize>>,
     pub show_results: bool,
     pub score: usize,
+    pub database: Option<Database>,
 }
 
 impl Quiz {
@@ -38,6 +40,7 @@ impl Quiz {
             user_answers,
             show_results: false,
             score: 0,
+            database: Some(db),
         })
     }
 
@@ -60,6 +63,12 @@ impl Quiz {
 
     pub fn select_answer(&mut self) {
         self.user_answers[self.current_question] = Some(self.selected_answer);
+    }
+
+    pub async fn select_answer_async(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        self.user_answers[self.current_question] = Some(self.selected_answer);
+        self.submit_answer(self.selected_answer).await?;
+        Ok(())
     }
 
     pub fn move_selection_up(&mut self) {
@@ -99,6 +108,17 @@ impl Quiz {
         self.user_answers = vec![None; self.quiz_data.questions.len()];
         self.show_results = false;
         self.score = 0;
+    }
+
+    pub async fn submit_answer(&mut self, answer: usize) -> Result<(), Box<dyn std::error::Error>> {
+        if let Some(db) = &self.database {
+            let question = &self.quiz_data.questions[self.current_question];
+            if let Some(question_id) = question.id {
+                let is_correct = answer == question.correct;
+                db.srs.process_review(question_id, 1, is_correct).await?;
+            }
+        }
+        Ok(())
     }
 
     pub fn get_score_percentage(&self) -> u32 {

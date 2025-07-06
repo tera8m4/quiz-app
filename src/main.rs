@@ -2,6 +2,8 @@ mod app;
 mod ui;
 mod quiz;
 mod database;
+mod srs;
+mod srs_quiz;
 
 use crossterm::{
     event::{DisableMouseCapture, EnableMouseCapture},
