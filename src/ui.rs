@@ -30,8 +30,12 @@ pub fn draw(f: &mut Frame, quiz: &Quiz) {
 }
 
 fn draw_title(f: &mut Frame, area: ratatui::layout::Rect) {
-    let title = Paragraph::new("🧠 Quiz App")
-        .style(Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+    let title = Paragraph::new("🧠 SRS Quiz Review")
+        .style(
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        )
         .alignment(Alignment::Center)
         .block(Block::default().borders(Borders::ALL));
     f.render_widget(title, area);
@@ -40,11 +44,20 @@ fn draw_title(f: &mut Frame, area: ratatui::layout::Rect) {
 fn draw_question(f: &mut Frame, quiz: &Quiz, area: ratatui::layout::Rect) {
     let question_chunks = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Length(4), Constraint::Min(6)])
+        .constraints([
+            Constraint::Length(4),
+            Constraint::Min(6),
+            Constraint::Length(3),
+        ])
         .split(area);
 
-    draw_question_text(f, quiz, question_chunks[0]);
-    draw_answer_options(f, quiz, question_chunks[1]);
+    if quiz.has_questions() {
+        draw_question_text(f, quiz, question_chunks[0]);
+        draw_answer_options(f, quiz, question_chunks[1]);
+        draw_srs_info(f, quiz, question_chunks[2]);
+    } else {
+        draw_no_questions_message(f, area);
+    }
 }
 
 fn draw_question_text(f: &mut Frame, quiz: &Quiz, area: ratatui::layout::Rect) {
@@ -97,7 +110,9 @@ fn get_answer_style(quiz: &Quiz, answer_index: usize) -> Style {
             .add_modifier(Modifier::BOLD)
     } else if quiz.get_current_answer() == Some(answer_index) {
         // Previously selected answer
-        Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)
+        Style::default()
+            .fg(Color::Green)
+            .add_modifier(Modifier::BOLD)
     } else {
         // Default answer style
         Style::default().fg(Color::Gray)
@@ -115,7 +130,11 @@ fn draw_results(f: &mut Frame, quiz: &Quiz, area: ratatui::layout::Rect) {
     );
 
     let results = Paragraph::new(results_text)
-        .style(Style::default().fg(Color::Green).add_modifier(Modifier::BOLD))
+        .style(
+            Style::default()
+                .fg(Color::Green)
+                .add_modifier(Modifier::BOLD),
+        )
         .alignment(Alignment::Center)
         .wrap(Wrap { trim: true })
         .block(Block::default().borders(Borders::ALL).title("Results"));
@@ -123,9 +142,41 @@ fn draw_results(f: &mut Frame, quiz: &Quiz, area: ratatui::layout::Rect) {
     f.render_widget(results, area);
 }
 
+fn draw_srs_info(f: &mut Frame, quiz: &Quiz, area: ratatui::layout::Rect) {
+    let srs_text = if let Some(progress_info) = quiz.get_srs_progress_info() {
+        let progress = format!(
+            "Question {} of {}",
+            quiz.current_question + 1,
+            quiz.quiz_data.questions.len()
+        );
+        format!("SRS Stage: {} • {}", progress_info, progress)
+    } else {
+        format!(
+            "Question {} of {}",
+            quiz.current_question + 1,
+            quiz.quiz_data.questions.len()
+        )
+    };
+
+    let srs_info = Paragraph::new(srs_text)
+        .style(Style::default().fg(Color::Magenta))
+        .alignment(Alignment::Center)
+        .block(Block::default().borders(Borders::ALL).title("Progress"));
+    f.render_widget(srs_info, area);
+}
+
+fn draw_no_questions_message(f: &mut Frame, area: ratatui::layout::Rect) {
+    let message = Paragraph::new("📚 No questions available for review\n\nAll your questions are up to date!\nCome back later for more practice.")
+        .style(Style::default().fg(Color::Gray))
+        .alignment(Alignment::Center)
+        .wrap(Wrap { trim: true })
+        .block(Block::default().borders(Borders::ALL).title("SRS Review"));
+    f.render_widget(message, area);
+}
+
 fn draw_instructions(f: &mut Frame, quiz: &Quiz, area: ratatui::layout::Rect) {
     let instructions = if quiz.show_results {
-        "Enter/r - Restart • Esc/q - Quit"
+        "Enter/r - Reload Queue • Esc/q - Quit"
     } else {
         "↑/↓ Select • Space/Enter/→ Confirm • ← Previous • Esc/q - Quit"
     };
@@ -136,3 +187,4 @@ fn draw_instructions(f: &mut Frame, quiz: &Quiz, area: ratatui::layout::Rect) {
         .block(Block::default().borders(Borders::ALL));
     f.render_widget(help, area);
 }
+

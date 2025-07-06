@@ -20,15 +20,15 @@ impl App {
         }
     }
 
-    pub fn run<B: Backend>(&mut self, terminal: &mut Terminal<B>) -> io::Result<()> {
+    pub async fn run<B: Backend>(&mut self, terminal: &mut Terminal<B>) -> io::Result<()> {
         while !self.should_quit {
             terminal.draw(|f| ui::draw(f, &self.quiz))?;
-            self.handle_events()?;
+            self.handle_events().await?;
         }
         Ok(())
     }
 
-    fn handle_events(&mut self) -> io::Result<()> {
+    async fn handle_events(&mut self) -> io::Result<()> {
         if let Event::Key(key) = event::read()? {
             match key.code {
                 KeyCode::Char('q') | KeyCode::Esc => {
@@ -46,9 +46,10 @@ impl App {
                 }
                 KeyCode::Enter => {
                     if self.quiz.show_results {
-                        self.quiz.restart();
+                        let _ = self.quiz.reload_srs_queue().await;
                     } else {
                         self.quiz.select_answer();
+                        let _ = self.quiz.submit_answer(self.quiz.selected_answer).await;
                         self.quiz.next_question();
                     }
                 }
@@ -60,6 +61,7 @@ impl App {
                 KeyCode::Right => {
                     if !self.quiz.show_results {
                         self.quiz.select_answer();
+                        let _ = self.quiz.submit_answer(self.quiz.selected_answer).await;
                         self.quiz.next_question();
                     }
                 }
@@ -70,7 +72,7 @@ impl App {
                 }
                 KeyCode::Char('r') => {
                     if self.quiz.show_results {
-                        self.quiz.restart();
+                        let _ = self.quiz.reload_srs_queue().await;
                     }
                 }
                 _ => {}
